@@ -228,7 +228,7 @@ int main(int argc, char* argv[]) {
         }
 
         cnt++;
-        if (cnt == 50) {
+        if (cnt == 5) {
             Flow* cur = head;
             while (cur != nullptr) {
                 infect(handle, cur, myMac);
