@@ -73,6 +73,7 @@ bool resolveMac(pcap_t* handle, Mac myMac, Ip myIp, Ip TIp, Mac& resultMac) {
 
         ArpHdr* arp = (ArpHdr*)(packet + sizeof(EthHdr));
         if (arp->op() != ArpHdr::Reply) continue;
+	if (arp->sip() != TIp) continue;
 
 	printf("arp reply detected\n\n");
 
